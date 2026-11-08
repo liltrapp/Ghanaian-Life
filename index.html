@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Ghana Dream Life — 3D Prototype</title>
+<title>Ghanaian Life — Accra & Town Open World</title>
 <style>
-  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#9fd4ed;font-family:Arial,sans-serif;touch-action:none}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#aebdc4;font-family:Arial,sans-serif;touch-action:none}
   #game{position:fixed;inset:0}
   #hud{position:fixed;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;gap:8px;pointer-events:none;color:white;text-shadow:0 2px 4px #000}
   .pill{background:#10251fdd;border:1px solid #ffffff35;border-radius:12px;padding:9px 12px;font-size:13px}
@@ -34,10 +34,10 @@
 <body>
 <div id="game"></div>
 <div id="hud">
- <div class="pill"><b>GHANA DREAM LIFE</b><br>ACCRA • EARLY ACCESS</div>
- <div class="pill">Wallet: <b>GH₵10,000</b><br><span id="status">Free roam</span></div>
+ <div class="pill"><b>GHANAIAN LIFE</b><br>ACCRA • TOWN DISTRICT</div>
+ <div class="pill">Wallet: <b>GH₵10,000</b><br><span id="status">Exploring the city</span></div>
 </div>
-<div id="notice">Explore the neighbourhood</div>
+<div id="notice">Welcome to Ghanaian Life</div>
 <div id="mapWrap"><canvas id="map" width="300" height="300" aria-label="Neighbourhood minimap"></canvas><div id="mapLabel">ACCRA • MAP</div></div>
 <button id="mapBtn" type="button">Hide map</button>
 <button id="phoneBtn" type="button" aria-label="Open in-game phone">📱</button>
@@ -53,15 +53,15 @@
  </div>
  <div id="phoneScreen" aria-live="polite">Choose an app. Check your business, manage your money or chat in this prototype.</div>
 </section>
-<div id="help">Move: WASD / arrow keys<br>Mobile: left joystick to walk, drag right side to look around.</div>
+<div id="help">Explore Accra & town streets<br>Move: WASD / arrows or left joystick<br>Drag right side to look around. Walk up to a car to explore it.</div>
 <div id="stick"><div id="knob"></div></div><div id="look"></div>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
 const root=document.getElementById('game');
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x9fd4ed);
-scene.fog=new THREE.Fog(0x9fd4ed,55,180);
+scene.background=new THREE.Color(0xaebdc4);
+scene.fog=new THREE.Fog(0xaebdc4,105,290);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,300);
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -70,14 +70,14 @@ renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 root.appendChild(renderer.domElement);
 
-scene.add(new THREE.HemisphereLight(0xffffff,0x64735b,2));
-const sun=new THREE.DirectionalLight(0xfff1d1,2.2);
+scene.add(new THREE.HemisphereLight(0xe6edf0,0x4a5147,1.45));
+const sun=new THREE.DirectionalLight(0xffe3bd,2.7);
 sun.position.set(-35,55,25);sun.castShadow=true;
 sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-90;sun.shadow.camera.right=90;sun.shadow.camera.top=90;sun.shadow.camera.bottom=-90;
 scene.add(sun);
 
 const mat=(color,roughness=1)=>new THREE.MeshStandardMaterial({color,roughness});
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(240,240),mat(0x8da66c));
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(240,240),mat(0x77796b));
 ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
 
 function box(w,h,d,x,y,z,m,shadow=true){
@@ -85,8 +85,8 @@ function box(w,h,d,x,y,z,m,shadow=true){
  o.castShadow=shadow;o.receiveShadow=true;scene.add(o);return o;
 }
 // Roads and pavements
-box(240,.12,18,0,.07,0,mat(0x343a3c),false);
-box(18,.12,240,0,.075,0,mat(0x343a3c),false);
+box(240,.12,18,0,.07,0,mat(0x25292b),false);
+box(18,.12,240,0,.075,0,mat(0x25292b),false);
 for(let i=-100;i<=100;i+=12){
  box(5,.025,.28,i,.145,0,mat(0xf3e7b5),false);
  box(.28,.025,5,0,.15,i,mat(0xf3e7b5),false);
@@ -97,8 +97,8 @@ box(3,.18,240,10.5,.16,0,mat(0xc8bda2),false);
 box(3,.18,240,-10.5,.16,0,mat(0xc8bda2),false);
 
 // Ghanaian-style low-rise homes and shops
-const wallMats=[mat(0xe6c79a),mat(0xf0dfbd),mat(0xd9a66e),mat(0xe8e5d7),mat(0xc8d6c4)];
-const roofMats=[mat(0x9c4936),mat(0x5d6265),mat(0x8d6a42)];
+const wallMats=[mat(0xb9a58c),mat(0xc7bba6),mat(0xa98260),mat(0xb9b5a9),mat(0x9eaa9c)];
+const roofMats=[mat(0x554b43),mat(0x45494b),mat(0x66594a)];
 function building(x,z,w,d,h,idx){
  const wall=wallMats[idx%wallMats.length],roof=roofMats[idx%roofMats.length];
  box(w,h,d,x,h/2,z,wall);
@@ -122,7 +122,70 @@ const lots=[
  [-75,0,15,14,7],[75,0,15,14,8],[-80,35,13,13,6],[80,-38,14,13,7],
  [-25,-65,15,14,8],[25,65,15,14,8],[65,65,14,12,7],[-65,-65,14,12,7]
 ];
+
 lots.forEach((a,i)=>building(...a,i));
+
+// A denser mixed Accra / Ghanaian town district: apartment blocks, offices and kiosks.
+const glass=mat(0x54717b,.42), concrete=mat(0xaaa99f), white=mat(0xd7d0c2), red=mat(0x9c3f2e), blue=mat(0x36566b);
+function tower(x,z,w,d,h,base,accent){
+  box(w,h,d,x,h/2,z,base);
+  box(w+.35,.35,d+.35,x,h+.12,z,accent);
+  for(let y=2;y<h-1.2;y+=2.1){
+    for(let xx=-w/2+1;xx<w/2-.5;xx+=2){
+      const win=new THREE.Mesh(new THREE.BoxGeometry(1.15,1.05,.055),glass);
+      win.position.set(x+xx,y,z+d/2+.035);scene.add(win);
+      const win2=win.clone();win2.position.z=z-d/2-.035;scene.add(win2);
+    }
+  }
+}
+tower(-83,-48,17,16,23,concrete,red);
+tower(84,49,18,17,29,blue,white);
+tower(83,-72,15,15,19,white,red);
+tower(-82,72,16,15,17,concrete,blue);
+// More residential compounds around the edge of the district.
+for(let i=0;i<22;i++){
+ const x=(i%6)*27-68, z=Math.floor(i/6)*34-70;
+ if(Math.abs(x)<18||Math.abs(z)<18) continue;
+ building(x,z,10+(i%3)*2,9,5+(i%4),i+2);
+}
+// Market kiosks with colourful awnings.
+function kiosk(x,z,colour,label){
+ box(5,2.8,4,x,1.4,z,mat(0xb89a72));
+ box(5.7,.22,4.7,x,2.95,z,mat(colour));
+ box(5.3,.12,.12,x,3.12,z+2.25,mat(0xf1e7d6));
+ box(2.3,.95,.08,x,1.45,z+2.06,mat(0x4d3022));
+}
+kiosk(-34,-5,0xb33c32,'PROVISIONS'); kiosk(34,5,0x28734b,'PHONE SHOP'); kiosk(42,-48,0xd59a2d,'CHOP BAR');
+// Street lamps and roadside utility poles.
+function lamp(x,z){
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.09,.13,5.8,8),mat(0x45494a));pole.position.set(x,2.9,z);scene.add(pole);
+ const arm=new THREE.Mesh(new THREE.BoxGeometry(1.2,.12,.12),mat(0x45494a));arm.position.set(x+.5,5.65,z);scene.add(arm);
+ const bulb=new THREE.Mesh(new THREE.BoxGeometry(.48,.16,.3),new THREE.MeshStandardMaterial({color:0xffe5a4,emissive:0x6a4c1c}));bulb.position.set(x+1,5.55,z);scene.add(bulb);
+}
+for(let i=-90;i<=90;i+=30){lamp(i,8);lamp(i,-8)}
+// Parked cars: detailed low-poly street vehicles, sized for the third-person world.
+const traffic=[];
+function makeCar(x,z,paint,rotation=0){
+ const g=new THREE.Group(); const body=mat(paint,.48), dark=mat(0x171c20,.7), windowMat=new THREE.MeshStandardMaterial({color:0x263b45,metalness:.25,roughness:.25});
+ const base=new THREE.Mesh(new THREE.BoxGeometry(2.25,.72,4.3),body);base.position.y=.72;base.castShadow=true;g.add(base);
+ const cabin=new THREE.Mesh(new THREE.BoxGeometry(1.78,.78,2.1),windowMat);cabin.position.set(0,1.38,-.15);cabin.castShadow=true;g.add(cabin);
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(1.72,.12,1.9),body);roof.position.set(0,1.8,-.15);g.add(roof);
+ for(const xx of [-1.13,1.13])for(const zz of [-1.35,1.35]){const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.39,.39,.22,12),dark);wheel.rotation.z=Math.PI/2;wheel.position.set(xx,.42,zz);g.add(wheel)}
+ for(const xx of [-.72,.72]){const light=new THREE.Mesh(new THREE.BoxGeometry(.35,.2,.08),mat(0xffe8b0));light.position.set(xx,.82,2.17);g.add(light)}
+ g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);traffic.push(g);return g;
+}
+makeCar(-7,5,0x9b3028,Math.PI/2);makeCar(7,-5,0xe0e0d8,Math.PI/2);makeCar(45,17,0x253f63,0);makeCar(-48,-17,0x9c9d91,0);
+// Pedestrians with varied clothing, kept simple and proportionate rather than toy-like.
+const pedestrians=[];
+function person(x,z,shirtColour){
+ const g=new THREE.Group(), skinTone=mat(0x75472f), cloth=mat(shirtColour), trousers=mat(0x24272a), shoes=mat(0x171717);
+ const torso=new THREE.Mesh(new THREE.CylinderGeometry(.25,.31,.7,10),cloth);torso.position.y=1.2;g.add(torso);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.2,14,12),skinTone);head.position.y=1.75;g.add(head);
+ for(const dx of [-.13,.13]){const leg=new THREE.Mesh(new THREE.CylinderGeometry(.075,.09,.62,8),trousers);leg.position.set(dx,.55,0);g.add(leg);}
+ g.position.set(x,0,z);scene.add(g);pedestrians.push({g,origin:new THREE.Vector3(x,0,z),phase:Math.random()*6.28});
+}
+person(-24,18,0x315b43);person(25,-18,0x8a4734);person(39,34,0x343d62);person(-42,-38,0x777b35);person(58,-10,0x6b4030);
+
 
 // Trees
 function tree(x,z){
@@ -143,13 +206,17 @@ box(8,.5,.6,0,4.3,-39,mat(0x1d4b3a));
 
 // Player character
 const player=new THREE.Group();scene.add(player);
-const skin=mat(0x8a5737),shirt=mat(0x236b59),pants=mat(0x29313a),shoe=mat(0x171717);
-const body=new THREE.Mesh(new THREE.CapsuleGeometry(.42,.72,4,8),shirt);body.position.y=1.25;body.castShadow=true;player.add(body);
-const head=new THREE.Mesh(new THREE.SphereGeometry(.31,16,12),skin);head.position.y=2.05;head.castShadow=true;player.add(head);
-const leg1=new THREE.Mesh(new THREE.CapsuleGeometry(.15,.55,3,7),pants);leg1.position.set(-.2,.48,0);player.add(leg1);
-const leg2=leg1.clone();leg2.position.x=.2;player.add(leg2);
-const arm1=new THREE.Mesh(new THREE.CapsuleGeometry(.12,.55,3,7),skin);arm1.position.set(-.5,1.3,0);arm1.rotation.z=-.25;player.add(arm1);
-const arm2=arm1.clone();arm2.position.x=.5;arm2.rotation.z=.25;player.add(arm2);
+const skin=mat(0x75472f,.86),shirt=mat(0x303c38,.92),pants=mat(0x25282a,.95),shoe=mat(0x171717,.9),hair=mat(0x171513,.95);
+// More natural human proportions: fitted torso, neck, head, separate limbs and shoes.
+const torso=new THREE.Mesh(new THREE.CylinderGeometry(.29,.38,.78,12),shirt);torso.position.y=1.28;torso.castShadow=true;player.add(torso);
+const neck=new THREE.Mesh(new THREE.CylinderGeometry(.105,.12,.16,10),skin);neck.position.y=1.77;player.add(neck);
+const head=new THREE.Mesh(new THREE.SphereGeometry(.255,20,16),skin);head.scale.set(.9,1.13,.92);head.position.y=2.02;head.castShadow=true;player.add(head);
+const hairCap=new THREE.Mesh(new THREE.SphereGeometry(.258,16,10,0,Math.PI*2,0,Math.PI*.55),hair);hairCap.scale.set(.94,1.05,.96);hairCap.position.y=2.09;player.add(hairCap);
+const leg1=new THREE.Mesh(new THREE.CylinderGeometry(.105,.13,.76,10),pants);leg1.position.set(-.17,.49,0);leg1.castShadow=true;player.add(leg1);
+const leg2=leg1.clone();leg2.position.x=.17;player.add(leg2);
+const arm1=new THREE.Mesh(new THREE.CylinderGeometry(.085,.105,.62,10),skin);arm1.position.set(-.43,1.29,0);arm1.rotation.z=-.12;arm1.castShadow=true;player.add(arm1);
+const arm2=arm1.clone();arm2.position.x=.43;arm2.rotation.z=.12;player.add(arm2);
+for(const x of [-.17,.17]){const foot=new THREE.Mesh(new THREE.BoxGeometry(.22,.12,.38),shoe);foot.position.set(x,.09,-.08);foot.castShadow=true;player.add(foot);}
 player.position.set(0,0,5);
 
 // Camera orbit / controls
@@ -252,8 +319,8 @@ function animate(){
  if(mag>.08){
   forward/=Math.max(1,mag);side/=Math.max(1,mag);
   const fx=-Math.sin(yaw),fz=-Math.cos(yaw),rx=Math.cos(yaw),rz=-Math.sin(yaw);
-  player.position.x+=(fx*forward+rx*side)*8*dt;
-  player.position.z+=(fz*forward+rz*side)*8*dt;
+  player.position.x+=(fx*forward+rx*side)*6.2*dt;
+  player.position.z+=(fz*forward+rz*side)*6.2*dt;
   player.rotation.y=Math.atan2(fx*forward+rx*side,fz*forward+rz*side);
   document.getElementById('status').textContent='Exploring Accra';
  }else document.getElementById('status').textContent='Free roam';
@@ -262,6 +329,7 @@ function animate(){
  const distance=10;
  const target=new THREE.Vector3(player.position.x+Math.sin(yaw)*distance*Math.cos(pitch),player.position.y+4+distance*Math.sin(pitch),player.position.z+Math.cos(yaw)*distance*Math.cos(pitch));
  camera.position.lerp(target,.14);camera.lookAt(player.position.x,1.3,player.position.z);
+ for(const p of pedestrians){p.phase+=dt*.7;p.g.position.x=p.origin.x+Math.sin(p.phase)*1.7;p.g.position.z=p.origin.z+Math.cos(p.phase*.7)*1.2;}
  drawMap();
  renderer.render(scene,camera);
 }
