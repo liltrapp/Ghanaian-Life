@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Ghana Dream Life — 3D Prototype</title>
+<style>
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#9fd4ed;font-family:Arial,sans-serif;touch-action:none}
+  #game{position:fixed;inset:0}
+  #hud{position:fixed;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;gap:8px;pointer-events:none;color:white;text-shadow:0 2px 4px #000}
+  .pill{background:#10251fdd;border:1px solid #ffffff35;border-radius:12px;padding:9px 12px;font-size:13px}
+  #help{position:fixed;left:12px;bottom:14px;background:#10251fdd;color:white;padding:10px 12px;border-radius:12px;font-size:12px;max-width:210px;line-height:1.4}
+  #stick{position:fixed;left:22px;bottom:22px;width:112px;height:112px;border-radius:50%;background:#ffffff35;border:2px solid #ffffff9c;display:none;touch-action:none}
+  #knob{position:absolute;width:44px;height:44px;left:32px;top:32px;border-radius:50%;background:#ffffffd9;box-shadow:0 2px 8px #0005}
+  #look{position:fixed;right:0;bottom:0;width:48%;height:55%;touch-action:none}
+  #notice{position:fixed;left:50%;top:68px;transform:translateX(-50%);background:#10251fee;color:white;padding:8px 12px;border-radius:10px;font-size:12px;white-space:nowrap}
+  #mapWrap{position:fixed;right:12px;top:92px;width:154px;height:154px;border:2px solid #ffffffd9;border-radius:14px;overflow:hidden;background:#17251f;box-shadow:0 3px 12px #0005}
+  #map{width:100%;height:100%;display:block}
+  #mapLabel{position:absolute;left:7px;top:6px;color:white;font-size:10px;font-weight:bold;text-shadow:0 1px 3px #000;pointer-events:none}
+  #mapBtn{position:fixed;right:12px;top:258px;border:0;border-radius:9px;padding:8px 11px;background:#10251fee;color:white;font-weight:bold;font-size:11px}
+  #phoneBtn{position:fixed;right:14px;bottom:18px;width:58px;height:58px;border:2px solid #ffffffb8;border-radius:18px;background:#173d32;color:white;font-size:25px;box-shadow:0 3px 12px #0005}
+  #phonePanel{display:none;position:fixed;right:12px;bottom:88px;width:min(310px,calc(100vw - 24px));max-height:65%;overflow:auto;background:#14251ff5;color:white;border:1px solid #ffffff55;border-radius:20px;padding:14px;box-shadow:0 8px 28px #0008}
+  #phonePanel h3{margin:0 0 10px;font-size:18px}
+  #phonePanel p{font-size:12px;color:#d5e4dc;margin:5px 0 12px}
+  .phoneGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .phoneGrid button,#phonePanel button.action{border:1px solid #ffffff35;border-radius:12px;padding:11px;background:#285646;color:white;font-weight:bold;min-height:44px}
+  #phoneScreen{margin-top:12px;padding:12px;background:#ffffff12;border-radius:12px;font-size:13px;line-height:1.45;min-height:72px}
+  #chatInput{width:100%;box-sizing:border-box;margin-top:8px;padding:11px;border:1px solid #ffffff55;border-radius:9px;background:#fff;color:#111;font-size:16px}
+  #phonePanel .closePhone{float:right;background:#563b36}
+  @media(max-width:420px){#mapWrap{width:124px;height:124px;top:88px}#mapBtn{top:220px}}
+  @media(pointer:coarse){#stick{display:block}#help{left:12px;bottom:145px}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="hud">
+ <div class="pill"><b>GHANA DREAM LIFE</b><br>ACCRA • EARLY ACCESS</div>
+ <div class="pill">Wallet: <b>GH₵10,000</b><br><span id="status">Free roam</span></div>
+</div>
+<div id="notice">Explore the neighbourhood</div>
+<div id="mapWrap"><canvas id="map" width="300" height="300" aria-label="Neighbourhood minimap"></canvas><div id="mapLabel">ACCRA • MAP</div></div>
+<button id="mapBtn" type="button">Hide map</button>
+<button id="phoneBtn" type="button" aria-label="Open in-game phone">📱</button>
+<section id="phonePanel" aria-label="In-game phone">
+ <button class="closePhone" id="closePhone" type="button">✕</button>
+ <h3>📱 My Phone</h3>
+ <p>GHANA DREAM LIFE • Virtual phone</p>
+ <div class="phoneGrid">
+  <button type="button" data-screen="business">🏪 Business</button>
+  <button type="button" data-screen="messages">💬 Messages</button>
+  <button type="button" data-screen="contacts">👥 Contacts</button>
+  <button type="button" data-screen="bank">🏦 Bank</button>
+ </div>
+ <div id="phoneScreen" aria-live="polite">Choose an app. Check your business, manage your money or chat in this prototype.</div>
+</section>
+<div id="help">Move: WASD / arrow keys<br>Mobile: left joystick to walk, drag right side to look around.</div>
+<div id="stick"><div id="knob"></div></div><div id="look"></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+const root=document.getElementById('game');
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9fd4ed);
+scene.fog=new THREE.Fog(0x9fd4ed,55,180);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,300);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+root.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x64735b,2));
+const sun=new THREE.DirectionalLight(0xfff1d1,2.2);
+sun.position.set(-35,55,25);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-90;sun.shadow.camera.right=90;sun.shadow.camera.top=90;sun.shadow.camera.bottom=-90;
+scene.add(sun);
+
+const mat=(color,roughness=1)=>new THREE.MeshStandardMaterial({color,roughness});
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(240,240),mat(0x8da66c));
+ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+
+function box(w,h,d,x,y,z,m,shadow=true){
+ const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);
+ o.castShadow=shadow;o.receiveShadow=true;scene.add(o);return o;
+}
+// Roads and pavements
+box(240,.12,18,0,.07,0,mat(0x343a3c),false);
+box(18,.12,240,0,.075,0,mat(0x343a3c),false);
+for(let i=-100;i<=100;i+=12){
+ box(5,.025,.28,i,.145,0,mat(0xf3e7b5),false);
+ box(.28,.025,5,0,.15,i,mat(0xf3e7b5),false);
+}
+box(240,.18,3,0,.16,10.5,mat(0xc8bda2),false);
+box(240,.18,3,0,.16,-10.5,mat(0xc8bda2),false);
+box(3,.18,240,10.5,.16,0,mat(0xc8bda2),false);
+box(3,.18,240,-10.5,.16,0,mat(0xc8bda2),false);
+
+// Ghanaian-style low-rise homes and shops
+const wallMats=[mat(0xe6c79a),mat(0xf0dfbd),mat(0xd9a66e),mat(0xe8e5d7),mat(0xc8d6c4)];
+const roofMats=[mat(0x9c4936),mat(0x5d6265),mat(0x8d6a42)];
+function building(x,z,w,d,h,idx){
+ const wall=wallMats[idx%wallMats.length],roof=roofMats[idx%roofMats.length];
+ box(w,h,d,x,h/2,z,wall);
+ // flat roof and parapet
+ box(w+.35,.35,d+.35,x,h+.12,z,roof);
+ // front door and windows
+ const front=z+d/2+.012;
+ box(w*.18,h*.42,.035,x-w*.25,h*.23,front,mat(0x654332),false);
+ for(const dx of [-w*.22,w*.22]){
+  box(w*.17,h*.18,.04,x+dx,h*.63,front,mat(0x8bc4d5),false);
+  box(w*.19,.07,.07,x+dx,h*.53,front,mat(0xffffff),false);
+ }
+ // sign on selected shops
+ if(idx%3===0){
+  box(w*.65,.42,.08,x,h*.82,front+.04,mat(0x1e493b),false);
+ }
+}
+const lots=[
+ [-28,-27,13,11,7],[-48,-26,12,12,6],[-29,27,14,12,8],[-50,29,13,11,6],
+ [28,-28,13,12,7],[49,-29,14,12,8],[29,28,14,12,7],[50,28,13,11,6],
+ [-75,0,15,14,7],[75,0,15,14,8],[-80,35,13,13,6],[80,-38,14,13,7],
+ [-25,-65,15,14,8],[25,65,15,14,8],[65,65,14,12,7],[-65,-65,14,12,7]
+];
+lots.forEach((a,i)=>building(...a,i));
+
+// Trees
+function tree(x,z){
+ const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.22,.32,3,7),mat(0x765034));
+ trunk.position.set(x,1.5,z);trunk.castShadow=true;scene.add(trunk);
+ const leaves=new THREE.Mesh(new THREE.SphereGeometry(1.65,8,7),mat(0x3d7947));
+ leaves.position.set(x,3.8,z);leaves.scale.set(1,1.15,1);leaves.castShadow=true;scene.add(leaves);
+}
+for(let x=-95;x<=95;x+=18){tree(x,15);tree(x,-15)}
+for(let z=-90;z<=90;z+=20){tree(15,z);tree(-15,z)}
+
+// A small fuel station landmark
+box(18,.35,12,0,.2,-39,mat(0xe7e0ce));
+box(16,.35,10,0,3.5,-39,mat(0xd64c37));
+box(15,.25,9,0,3.8,-39,mat(0xf0e8d7));
+for(let x of [-5,5]){box(.35,3,.35,x,2,-39,mat(0xffffff));}
+box(8,.5,.6,0,4.3,-39,mat(0x1d4b3a));
+
+// Player character
+const player=new THREE.Group();scene.add(player);
+const skin=mat(0x8a5737),shirt=mat(0x236b59),pants=mat(0x29313a),shoe=mat(0x171717);
+const body=new THREE.Mesh(new THREE.CapsuleGeometry(.42,.72,4,8),shirt);body.position.y=1.25;body.castShadow=true;player.add(body);
+const head=new THREE.Mesh(new THREE.SphereGeometry(.31,16,12),skin);head.position.y=2.05;head.castShadow=true;player.add(head);
+const leg1=new THREE.Mesh(new THREE.CapsuleGeometry(.15,.55,3,7),pants);leg1.position.set(-.2,.48,0);player.add(leg1);
+const leg2=leg1.clone();leg2.position.x=.2;player.add(leg2);
+const arm1=new THREE.Mesh(new THREE.CapsuleGeometry(.12,.55,3,7),skin);arm1.position.set(-.5,1.3,0);arm1.rotation.z=-.25;player.add(arm1);
+const arm2=arm1.clone();arm2.position.x=.5;arm2.rotation.z=.25;player.add(arm2);
+player.position.set(0,0,5);
+
+// Camera orbit / controls
+let yaw=0,pitch=.28;
+const keys={};
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true});
+addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
+let joy={x:0,y:0};
+const stick=document.getElementById('stick'),knob=document.getElementById('knob');
+let stickId=null;
+function setJoy(e){
+ const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+ let dx=e.clientX-cx,dy=e.clientY-cy,len=Math.hypot(dx,dy),max=39;
+ if(len>max){dx=dx/len*max;dy=dy/len*max}
+ joy.x=dx/max;joy.y=dy/max;
+ knob.style.transform=`translate(${dx}px,${dy}px)`;
+}
+stick.addEventListener('pointerdown',e=>{stickId=e.pointerId;stick.setPointerCapture(stickId);setJoy(e)});
+stick.addEventListener('pointermove',e=>{if(e.pointerId===stickId)setJoy(e)});
+function endStick(){stickId=null;joy={x:0,y:0};knob.style.transform='translate(0,0)'}
+stick.addEventListener('pointerup',endStick);stick.addEventListener('pointercancel',endStick);
+
+const look=document.getElementById('look');let lookId=null,lastX=0,lastY=0;
+look.addEventListener('pointerdown',e=>{lookId=e.pointerId;lastX=e.clientX;lastY=e.clientY;look.setPointerCapture(lookId)});
+look.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;let dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;yaw-=dx*.006;pitch=THREE.MathUtils.clamp(pitch+dy*.003,-.05,.85)});
+look.addEventListener('pointerup',()=>lookId=null);look.addEventListener('pointercancel',()=>lookId=null);
+
+// Simple top-down neighbourhood minimap. The map is schematic and follows the player.
+const mapCanvas=document.getElementById('map');
+const mapCtx=mapCanvas.getContext('2d');
+const mapWrap=document.getElementById('mapWrap');
+const mapBtn=document.getElementById('mapBtn');
+let mapVisible=true;
+mapBtn.addEventListener('click',()=>{
+ mapVisible=!mapVisible;
+ mapWrap.style.display=mapVisible?'block':'none';
+ mapBtn.textContent=mapVisible?'Hide map':'Show map';
+});
+function drawMap(){
+ const c=mapCtx, w=mapCanvas.width, h=mapCanvas.height;
+ c.clearRect(0,0,w,h);
+ c.fillStyle='#78936a';c.fillRect(0,0,w,h);
+ // Main roads
+ c.fillStyle='#343a3c';c.fillRect(0,132,w,36);c.fillRect(132,0,36,h);
+ // Side streets / paths
+ c.fillStyle='#c8bda2';c.fillRect(0,104,w,7);c.fillRect(0,189,w,7);
+ c.fillRect(104,0,7,h);c.fillRect(189,0,7,h);
+ // Buildings correspond to the neighbourhood blocks (schematic, not to scale)
+ const buildings=[[-28,-27],[-48,-26],[-29,27],[-50,29],[28,-28],[49,-29],[29,28],[50,28],[-75,0],[75,0],[-80,35],[80,-38],[-25,-65],[25,65],[65,65],[-65,-65]];
+ for(const [bx,bz] of buildings){
+  const px=w/2+(bx-player.position.x)*1.05;
+  const py=h/2+(bz-player.position.z)*1.05;
+  if(px>-12&&px<w+12&&py>-12&&py<h+12){
+   c.fillStyle='#e7c89c';c.fillRect(px-8,py-7,16,14);
+   c.fillStyle='#9c4936';c.fillRect(px-8,py-7,16,3);
+  }
+ }
+ // Player marker
+ c.save();c.translate(w/2,h/2);c.rotate(-player.rotation.y);
+ c.fillStyle='#ffe34d';c.beginPath();c.moveTo(0,-13);c.lineTo(9,10);c.lineTo(0,6);c.lineTo(-9,10);c.closePath();c.fill();
+ c.strokeStyle='#17251f';c.lineWidth=3;c.stroke();c.restore();
+ // North marker
+ c.fillStyle='white';c.font='bold 14px Arial';c.textAlign='right';c.fillText('N',w-10,20);
+}
+// In-game phone: local demo interactions. Online calling/chat will need a multiplayer server.
+const phonePanel=document.getElementById('phonePanel');
+const phoneScreen=document.getElementById('phoneScreen');
+document.getElementById('phoneBtn').addEventListener('click',()=>{
+ phonePanel.style.display=phonePanel.style.display==='block'?'none':'block';
+});
+document.getElementById('closePhone').addEventListener('click',()=>phonePanel.style.display='none');
+phonePanel.querySelectorAll('[data-screen]').forEach(btn=>{
+ btn.addEventListener('click',()=>{
+  const screen=btn.dataset.screen;
+  if(screen==='business'){
+   phoneScreen.innerHTML='<b>MY BUSINESS</b><br>Corner Shop — Opening soon<br>Daily revenue: GH₵0<br>Status: Not purchased<br><button class="action" id="businessRefresh" type="button">Check business status</button>';
+   document.getElementById('businessRefresh').addEventListener('click',()=>{phoneScreen.innerHTML='<b>BUSINESS UPDATE</b><br>No businesses owned yet. Visit a shop or property office in the city to start your first business.'});
+  }else if(screen==='bank'){
+   phoneScreen.innerHTML='<b>GHANA DREAM BANK</b><br>Available balance: GH₵10,000<br>Transactions: No transactions yet.';
+  }else if(screen==='contacts'){
+   phoneScreen.innerHTML='<b>PLAYER CONTACTS</b><br>No players nearby yet.<br>When multiplayer is connected, players you meet can be added here.';
+  }else{
+   phoneScreen.innerHTML='<b>PLAYER CHAT</b><br><span style="color:#d5e4dc">Chat is currently a local preview. Live messages between players will be added with the online multiplayer system.</span><input id="chatInput" placeholder="Write a demo message…" maxlength="120"><button class="action" id="sendDemo" type="button" style="margin-top:8px">Send demo</button><div id="chatReply" style="margin-top:8px"></div>';
+   document.getElementById('sendDemo').addEventListener('click',()=>{
+    const input=document.getElementById('chatInput');
+    const reply=document.getElementById('chatReply');
+    reply.textContent=input.value.trim()?`You: ${input.value.trim()} (saved in this demo only)`:'Type a message first.';
+    input.value='';
+   });
+  }
+ });
+});
+const clock=new THREE.Clock();
+function animate(){
+ requestAnimationFrame(animate);
+ const dt=Math.min(clock.getDelta(),.04);
+ let forward=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0)-joy.y;
+ let side=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0)+joy.x;
+ const mag=Math.hypot(forward,side);
+ if(mag>.08){
+  forward/=Math.max(1,mag);side/=Math.max(1,mag);
+  const fx=-Math.sin(yaw),fz=-Math.cos(yaw),rx=Math.cos(yaw),rz=-Math.sin(yaw);
+  player.position.x+=(fx*forward+rx*side)*8*dt;
+  player.position.z+=(fz*forward+rz*side)*8*dt;
+  player.rotation.y=Math.atan2(fx*forward+rx*side,fz*forward+rz*side);
+  document.getElementById('status').textContent='Exploring Accra';
+ }else document.getElementById('status').textContent='Free roam';
+ player.position.x=THREE.MathUtils.clamp(player.position.x,-108,108);
+ player.position.z=THREE.MathUtils.clamp(player.position.z,-108,108);
+ const distance=10;
+ const target=new THREE.Vector3(player.position.x+Math.sin(yaw)*distance*Math.cos(pitch),player.position.y+4+distance*Math.sin(pitch),player.position.z+Math.cos(yaw)*distance*Math.cos(pitch));
+ camera.position.lerp(target,.14);camera.lookAt(player.position.x,1.3,player.position.z);
+ drawMap();
+ renderer.render(scene,camera);
+}
+animate();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>
