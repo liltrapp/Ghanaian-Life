@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Ghanaian Life — Accra & Town Open World</title>
+<style>
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#aebdc4;font-family:Arial,sans-serif;touch-action:none}
+  #game{position:fixed;inset:0}
+  #hud{position:fixed;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;gap:8px;pointer-events:none;color:white;text-shadow:0 2px 4px #000}
+  .pill{background:#10251fdd;border:1px solid #ffffff35;border-radius:12px;padding:9px 12px;font-size:13px}
+  #help{position:fixed;left:12px;bottom:14px;background:#10251fdd;color:white;padding:10px 12px;border-radius:12px;font-size:12px;max-width:210px;line-height:1.4}
+  #stick{position:fixed;left:22px;bottom:22px;width:112px;height:112px;border-radius:50%;background:#ffffff35;border:2px solid #ffffff9c;display:none;touch-action:none}
+  #knob{position:absolute;width:44px;height:44px;left:32px;top:32px;border-radius:50%;background:#ffffffd9;box-shadow:0 2px 8px #0005}
+  #look{position:fixed;right:0;bottom:0;width:48%;height:55%;touch-action:none}
+  #notice{position:fixed;left:50%;top:68px;transform:translateX(-50%);background:#10251fee;color:white;padding:8px 12px;border-radius:10px;font-size:12px;white-space:nowrap}
+  #mapWrap{position:fixed;right:12px;top:92px;width:154px;height:154px;border:2px solid #ffffffd9;border-radius:14px;overflow:hidden;background:#17251f;box-shadow:0 3px 12px #0005}
+  #map{width:100%;height:100%;display:block}
+  #mapLabel{position:absolute;left:7px;top:6px;color:white;font-size:10px;font-weight:bold;text-shadow:0 1px 3px #000;pointer-events:none}
+  #mapBtn{position:fixed;right:12px;top:258px;border:0;border-radius:9px;padding:8px 11px;background:#10251fee;color:white;font-weight:bold;font-size:11px}
+  #enterCarBtn{position:fixed;right:84px;bottom:24px;border:2px solid #ffffffb8;border-radius:14px;background:#b8872f;color:#17130b;font-weight:800;padding:14px 13px;box-shadow:0 3px 12px #0005;display:block}
+  #phoneBtn{position:fixed;right:14px;bottom:18px;width:58px;height:58px;border:2px solid #ffffffb8;border-radius:18px;background:#173d32;color:white;font-size:25px;box-shadow:0 3px 12px #0005}
+  #phonePanel{display:none;position:fixed;right:12px;bottom:88px;width:min(310px,calc(100vw - 24px));max-height:65%;overflow:auto;background:#14251ff5;color:white;border:1px solid #ffffff55;border-radius:20px;padding:14px;box-shadow:0 8px 28px #0008}
+  #phonePanel h3{margin:0 0 10px;font-size:18px}
+  #phonePanel p{font-size:12px;color:#d5e4dc;margin:5px 0 12px}
+  .phoneGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .phoneGrid button,#phonePanel button.action{border:1px solid #ffffff35;border-radius:12px;padding:11px;background:#285646;color:white;font-weight:bold;min-height:44px}
+  #phoneScreen{margin-top:12px;padding:12px;background:#ffffff12;border-radius:12px;font-size:13px;line-height:1.45;min-height:72px}
+  #chatInput{width:100%;box-sizing:border-box;margin-top:8px;padding:11px;border:1px solid #ffffff55;border-radius:9px;background:#fff;color:#111;font-size:16px}
+  #phonePanel .closePhone{float:right;background:#563b36}
+  @media(max-width:420px){#mapWrap{width:124px;height:124px;top:88px}#mapBtn{top:220px}}
+  @media(pointer:coarse){#stick{display:block}#help{left:12px;bottom:145px}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="hud">
+ <div class="pill"><b>GHANAIAN LIFE</b><br>ACCRA • TOWN DISTRICT • CHARACTER TEST</div>
+ <div class="pill">Wallet: <b>GH₵10,000</b><br><span id="status">Exploring the city</span></div>
+</div>
+<div id="notice">Welcome to Ghanaian Life</div>
+<div id="mapWrap"><canvas id="map" width="300" height="300" aria-label="Neighbourhood minimap"></canvas><div id="mapLabel">ACCRA • MAP</div></div>
+<button id="mapBtn" type="button">Hide map</button>
+<button id="enterCarBtn" type="button">ENTER CAR</button><button id="phoneBtn" type="button" aria-label="Open in-game phone">📱</button>
+<section id="phonePanel" aria-label="In-game phone">
+ <button class="closePhone" id="closePhone" type="button">✕</button>
+ <h3>📱 My Phone</h3>
+ <p>GHANA DREAM LIFE • Virtual phone</p>
+ <div class="phoneGrid">
+  <button type="button" data-screen="business">🏪 Business</button>
+  <button type="button" data-screen="messages">💬 Messages</button>
+  <button type="button" data-screen="contacts">👥 Contacts</button>
+  <button type="button" data-screen="bank">🏦 Bank</button>
+ </div>
+ <div id="phoneScreen" aria-live="polite">Choose an app. Check your business, manage your money or chat in this prototype.</div>
+</section>
+<div id="help">Explore Accra & town streets<br>Walk: WASD / arrows or joystick<br>Look: drag right side<br>Walk near a car and tap ENTER CAR. Drive with the same controls; tap EXIT CAR to get out.</div>
+<div id="stick"><div id="knob"></div></div><div id="look"></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+const root=document.getElementById('game');
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0xaebdc4);
+scene.fog=new THREE.Fog(0xaebdc4,105,290);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,300);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+root.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xe6edf0,0x4a5147,1.45));
+const sun=new THREE.DirectionalLight(0xffe3bd,2.7);
+sun.position.set(-35,55,25);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-90;sun.shadow.camera.right=90;sun.shadow.camera.top=90;sun.shadow.camera.bottom=-90;
+scene.add(sun);
+
+const mat=(color,roughness=1)=>new THREE.MeshStandardMaterial({color,roughness});
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(240,240),mat(0x77796b));
+ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+
+function box(w,h,d,x,y,z,m,shadow=true){
+ const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);
+ o.castShadow=shadow;o.receiveShadow=true;scene.add(o);return o;
+}
+// Roads and pavements
+box(240,.12,18,0,.07,0,mat(0x25292b),false);
+box(18,.12,240,0,.075,0,mat(0x25292b),false);
+for(let i=-100;i<=100;i+=12){
+ box(5,.025,.28,i,.145,0,mat(0xf3e7b5),false);
+ box(.28,.025,5,0,.15,i,mat(0xf3e7b5),false);
+}
+box(240,.18,3,0,.16,10.5,mat(0xc8bda2),false);
+box(240,.18,3,0,.16,-10.5,mat(0xc8bda2),false);
+box(3,.18,240,10.5,.16,0,mat(0xc8bda2),false);
+box(3,.18,240,-10.5,.16,0,mat(0xc8bda2),false);
+
+// Ghanaian-style low-rise homes and shops
+const wallMats=[mat(0xb9a58c),mat(0xc7bba6),mat(0xa98260),mat(0xb9b5a9),mat(0x9eaa9c)];
+const roofMats=[mat(0x554b43),mat(0x45494b),mat(0x66594a)];
+function building(x,z,w,d,h,idx){
+ const wall=wallMats[idx%wallMats.length],roof=roofMats[idx%roofMats.length];
+ box(w,h,d,x,h/2,z,wall);
+ // flat roof and parapet
+ box(w+.35,.35,d+.35,x,h+.12,z,roof);
+ // front door and windows
+ const front=z+d/2+.012;
+ box(w*.18,h*.42,.035,x-w*.25,h*.23,front,mat(0x654332),false);
+ for(const dx of [-w*.22,w*.22]){
+  box(w*.17,h*.18,.04,x+dx,h*.63,front,mat(0x8bc4d5),false);
+  box(w*.19,.07,.07,x+dx,h*.53,front,mat(0xffffff),false);
+ }
+ // sign on selected shops
+ if(idx%3===0){
+  box(w*.65,.42,.08,x,h*.82,front+.04,mat(0x1e493b),false);
+ }
+}
+const lots=[
+ [-28,-27,13,11,7],[-48,-26,12,12,6],[-29,27,14,12,8],[-50,29,13,11,6],
+ [28,-28,13,12,7],[49,-29,14,12,8],[29,28,14,12,7],[50,28,13,11,6],
+ [-75,0,15,14,7],[75,0,15,14,8],[-80,35,13,13,6],[80,-38,14,13,7],
+ [-25,-65,15,14,8],[25,65,15,14,8],[65,65,14,12,7],[-65,-65,14,12,7]
+];
+
+lots.forEach((a,i)=>building(...a,i));
+
+// A denser mixed Accra / Ghanaian town district: apartment blocks, offices and kiosks.
+const glass=mat(0x54717b,.42), concrete=mat(0xaaa99f), white=mat(0xd7d0c2), red=mat(0x9c3f2e), blue=mat(0x36566b);
+function tower(x,z,w,d,h,base,accent){
+  box(w,h,d,x,h/2,z,base);
+  box(w+.35,.35,d+.35,x,h+.12,z,accent);
+  for(let y=2;y<h-1.2;y+=2.1){
+    for(let xx=-w/2+1;xx<w/2-.5;xx+=2){
+      const win=new THREE.Mesh(new THREE.BoxGeometry(1.15,1.05,.055),glass);
+      win.position.set(x+xx,y,z+d/2+.035);scene.add(win);
+      const win2=win.clone();win2.position.z=z-d/2-.035;scene.add(win2);
+    }
+  }
+}
+tower(-83,-48,17,16,23,concrete,red);
+tower(84,49,18,17,29,blue,white);
+tower(83,-72,15,15,19,white,red);
+tower(-82,72,16,15,17,concrete,blue);
+// More residential compounds around the edge of the district.
+for(let i=0;i<22;i++){
+ const x=(i%6)*27-68, z=Math.floor(i/6)*34-70;
+ if(Math.abs(x)<18||Math.abs(z)<18) continue;
+ building(x,z,10+(i%3)*2,9,5+(i%4),i+2);
+}
+// Market kiosks with colourful awnings.
+function kiosk(x,z,colour,label){
+ box(5,2.8,4,x,1.4,z,mat(0xb89a72));
+ box(5.7,.22,4.7,x,2.95,z,mat(colour));
+ box(5.3,.12,.12,x,3.12,z+2.25,mat(0xf1e7d6));
+ box(2.3,.95,.08,x,1.45,z+2.06,mat(0x4d3022));
+}
+kiosk(-34,-5,0xb33c32,'PROVISIONS'); kiosk(34,5,0x28734b,'PHONE SHOP'); kiosk(42,-48,0xd59a2d,'CHOP BAR');
+// Street lamps and roadside utility poles.
+function lamp(x,z){
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.09,.13,5.8,8),mat(0x45494a));pole.position.set(x,2.9,z);scene.add(pole);
+ const arm=new THREE.Mesh(new THREE.BoxGeometry(1.2,.12,.12),mat(0x45494a));arm.position.set(x+.5,5.65,z);scene.add(arm);
+ const bulb=new THREE.Mesh(new THREE.BoxGeometry(.48,.16,.3),new THREE.MeshStandardMaterial({color:0xffe5a4,emissive:0x6a4c1c}));bulb.position.set(x+1,5.55,z);scene.add(bulb);
+}
+for(let i=-90;i<=90;i+=30){lamp(i,8);lamp(i,-8)}
+// Parked cars: detailed low-poly street vehicles, sized for the third-person world.
+const traffic=[];
+function makeCar(x,z,paint,rotation=0){
+ const g=new THREE.Group(); const body=mat(paint,.48), dark=mat(0x171c20,.7), windowMat=new THREE.MeshStandardMaterial({color:0x263b45,metalness:.25,roughness:.25});
+ const base=new THREE.Mesh(new THREE.BoxGeometry(2.25,.72,4.3),body);base.position.y=.72;base.castShadow=true;g.add(base);
+ const cabin=new THREE.Mesh(new THREE.BoxGeometry(1.78,.78,2.1),windowMat);cabin.position.set(0,1.38,-.15);cabin.castShadow=true;g.add(cabin);
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(1.72,.12,1.9),body);roof.position.set(0,1.8,-.15);g.add(roof);
+ for(const xx of [-1.13,1.13])for(const zz of [-1.35,1.35]){const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.39,.39,.22,12),dark);wheel.rotation.z=Math.PI/2;wheel.position.set(xx,.42,zz);g.add(wheel)}
+ for(const xx of [-.72,.72]){const light=new THREE.Mesh(new THREE.BoxGeometry(.35,.2,.08),mat(0xffe8b0));light.position.set(xx,.82,2.17);g.add(light)}
+ g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);traffic.push(g);return g;
+}
+makeCar(-7,5,0x9b3028,Math.PI/2);makeCar(7,-5,0xe0e0d8,Math.PI/2);makeCar(45,17,0x253f63,0);makeCar(-48,-17,0x9c9d91,0);
+// Pedestrians with varied clothing, kept simple and proportionate rather than toy-like.
+const pedestrians=[];
+function person(x,z,shirtColour){
+ const g=new THREE.Group(), skinTone=mat(0x75472f), cloth=mat(shirtColour), trousers=mat(0x24272a), shoes=mat(0x171717);
+ const torso=new THREE.Mesh(new THREE.CylinderGeometry(.25,.31,.7,10),cloth);torso.position.y=1.2;g.add(torso);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.2,14,12),skinTone);head.position.y=1.75;g.add(head);
+ for(const dx of [-.13,.13]){const leg=new THREE.Mesh(new THREE.CylinderGeometry(.075,.09,.62,8),trousers);leg.position.set(dx,.55,0);g.add(leg);}
+ g.position.set(x,0,z);scene.add(g);pedestrians.push({g,origin:new THREE.Vector3(x,0,z),phase:Math.random()*6.28});
+}
+person(-24,18,0x315b43);person(25,-18,0x8a4734);person(39,34,0x343d62);person(-42,-38,0x777b35);person(58,-10,0x6b4030);
+
+
+// Trees
+function tree(x,z){
+ const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.22,.32,3,7),mat(0x765034));
+ trunk.position.set(x,1.5,z);trunk.castShadow=true;scene.add(trunk);
+ const leaves=new THREE.Mesh(new THREE.SphereGeometry(1.65,8,7),mat(0x3d7947));
+ leaves.position.set(x,3.8,z);leaves.scale.set(1,1.15,1);leaves.castShadow=true;scene.add(leaves);
+}
+for(let x=-95;x<=95;x+=18){tree(x,15);tree(x,-15)}
+for(let z=-90;z<=90;z+=20){tree(15,z);tree(-15,z)}
+
+// A small fuel station landmark
+box(18,.35,12,0,.2,-39,mat(0xe7e0ce));
+box(16,.35,10,0,3.5,-39,mat(0xd64c37));
+box(15,.25,9,0,3.8,-39,mat(0xf0e8d7));
+for(let x of [-5,5]){box(.35,3,.35,x,2,-39,mat(0xffffff));}
+box(8,.5,.6,0,4.3,-39,mat(0x1d4b3a));
+
+// Player character
+const player=new THREE.Group();scene.add(player);
+const skin=mat(0x75472f,.78),shirt=mat(0x24483d,.82),pants=mat(0x20252b,.9),shoe=mat(0x111315,.82),hair=mat(0x171513,.95);
+const eyeWhite=mat(0xf2e8d8), eyeDark=mat(0x171311), sole=mat(0x77716a);
+// More natural human proportions: fitted torso, neck, head, separate limbs and shoes.
+const torso=new THREE.Mesh(new THREE.CylinderGeometry(.29,.38,.78,12),shirt);torso.position.y=1.28;torso.castShadow=true;player.add(torso);
+const neck=new THREE.Mesh(new THREE.CylinderGeometry(.105,.12,.16,10),skin);neck.position.y=1.77;player.add(neck);
+const head=new THREE.Mesh(new THREE.SphereGeometry(.255,20,16),skin);head.scale.set(.9,1.13,.92);head.position.y=2.02;head.castShadow=true;player.add(head);
+const hairCap=new THREE.Mesh(new THREE.SphereGeometry(.258,16,10,0,Math.PI*2,0,Math.PI*.55),hair);hairCap.scale.set(.94,1.05,.96);hairCap.position.y=2.09;player.add(hairCap);
+// Face details, layered clothing and articulated limbs for a more readable human silhouette.
+for(const x of [-.085,.085]){
+ const eye=new THREE.Mesh(new THREE.SphereGeometry(.027,10,8),eyeWhite);eye.position.set(x,2.055,.222);player.add(eye);
+ const pupil=new THREE.Mesh(new THREE.SphereGeometry(.013,8,8),eyeDark);pupil.position.set(x,2.055,.246);player.add(pupil);
+}
+const nose=new THREE.Mesh(new THREE.SphereGeometry(.045,10,8),skin);nose.scale.set(.65,1,.7);nose.position.set(0,1.99,.25);player.add(nose);
+const leg1=new THREE.Group();leg1.position.set(-.17,.86,0);player.add(leg1);
+const legMesh1=new THREE.Mesh(new THREE.CylinderGeometry(.105,.13,.72,14),pants);legMesh1.position.y=-.36;legMesh1.castShadow=true;leg1.add(legMesh1);
+const leg2=leg1.clone();leg2.position.x=.17;player.add(leg2);
+const arm1=new THREE.Group();arm1.position.set(-.39,1.55,0);player.add(arm1);
+const armMesh1=new THREE.Mesh(new THREE.CylinderGeometry(.09,.115,.58,14),shirt);armMesh1.position.y=-.29;armMesh1.castShadow=true;arm1.add(armMesh1);
+const hand1=new THREE.Mesh(new THREE.SphereGeometry(.105,12,10),skin);hand1.position.y=-.61;arm1.add(hand1);
+const arm2=arm1.clone();arm2.position.x=.39;player.add(arm2);
+for(const x of [-.17,.17]){
+ const foot=new THREE.Mesh(new THREE.BoxGeometry(.24,.14,.4),shoe);foot.position.set(x,.09,-.08);foot.castShadow=true;player.add(foot);
+ const outsole=new THREE.Mesh(new THREE.BoxGeometry(.245,.045,.405),sole);outsole.position.set(x,.035,-.08);player.add(outsole);
+}
+player.position.set(0,0,5);
+
+// Camera orbit / controls
+let yaw=0,pitch=.28;
+let drivingCar=null;
+const carButton=document.getElementById("enterCarBtn");
+function nearestCar(){let best=null,dist=999;for(const c of traffic){const d=c.position.distanceTo(player.position);if(d<dist){dist=d;best=c;}}return dist<5?best:null;}
+function toggleCar(){if(drivingCar){player.visible=true;player.position.set(drivingCar.position.x+2.8,0,drivingCar.position.z);drivingCar=null;carButton.textContent="ENTER CAR";document.getElementById("status").textContent="On foot";return;}const c=nearestCar();if(!c){document.getElementById("notice").textContent="Walk closer to a parked car";setTimeout(()=>document.getElementById("notice").textContent="Welcome to Ghanaian Life",1800);return;}drivingCar=c;player.visible=false;carButton.textContent="EXIT CAR";document.getElementById("status").textContent="Driving";}
+carButton.addEventListener("click",toggleCar);
+const keys={};
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true});
+addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
+addEventListener('keydown',e=>{if(e.key.toLowerCase()==='e'&&!e.repeat)toggleCar();});
+let joy={x:0,y:0};
+const stick=document.getElementById('stick'),knob=document.getElementById('knob');
+let stickId=null;
+function setJoy(e){
+ const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+ let dx=e.clientX-cx,dy=e.clientY-cy,len=Math.hypot(dx,dy),max=39;
+ if(len>max){dx=dx/len*max;dy=dy/len*max}
+ joy.x=dx/max;joy.y=dy/max;
+ knob.style.transform=`translate(${dx}px,${dy}px)`;
+}
+stick.addEventListener('pointerdown',e=>{stickId=e.pointerId;stick.setPointerCapture(stickId);setJoy(e)});
+stick.addEventListener('pointermove',e=>{if(e.pointerId===stickId)setJoy(e)});
+function endStick(){stickId=null;joy={x:0,y:0};knob.style.transform='translate(0,0)'}
+stick.addEventListener('pointerup',endStick);stick.addEventListener('pointercancel',endStick);
+
+const look=document.getElementById('look');let lookId=null,lastX=0,lastY=0;
+look.addEventListener('pointerdown',e=>{lookId=e.pointerId;lastX=e.clientX;lastY=e.clientY;look.setPointerCapture(lookId)});
+look.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;let dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;yaw-=dx*.006;pitch=THREE.MathUtils.clamp(pitch+dy*.003,-.05,.85)});
+look.addEventListener('pointerup',()=>lookId=null);look.addEventListener('pointercancel',()=>lookId=null);
+
+// Simple top-down neighbourhood minimap. The map is schematic and follows the player.
+const mapCanvas=document.getElementById('map');
+const mapCtx=mapCanvas.getContext('2d');
+const mapWrap=document.getElementById('mapWrap');
+const mapBtn=document.getElementById('mapBtn');
+let mapVisible=true;
+mapBtn.addEventListener('click',()=>{
+ mapVisible=!mapVisible;
+ mapWrap.style.display=mapVisible?'block':'none';
+ mapBtn.textContent=mapVisible?'Hide map':'Show map';
+});
+function drawMap(){
+ const c=mapCtx, w=mapCanvas.width, h=mapCanvas.height;
+ c.clearRect(0,0,w,h);
+ c.fillStyle='#78936a';c.fillRect(0,0,w,h);
+ // Main roads
+ c.fillStyle='#343a3c';c.fillRect(0,132,w,36);c.fillRect(132,0,36,h);
+ // Side streets / paths
+ c.fillStyle='#c8bda2';c.fillRect(0,104,w,7);c.fillRect(0,189,w,7);
+ c.fillRect(104,0,7,h);c.fillRect(189,0,7,h);
+ // Buildings correspond to the neighbourhood blocks (schematic, not to scale)
+ const buildings=[[-28,-27],[-48,-26],[-29,27],[-50,29],[28,-28],[49,-29],[29,28],[50,28],[-75,0],[75,0],[-80,35],[80,-38],[-25,-65],[25,65],[65,65],[-65,-65]];
+ for(const [bx,bz] of buildings){
+  const px=w/2+(bx-player.position.x)*1.05;
+  const py=h/2+(bz-player.position.z)*1.05;
+  if(px>-12&&px<w+12&&py>-12&&py<h+12){
+   c.fillStyle='#e7c89c';c.fillRect(px-8,py-7,16,14);
+   c.fillStyle='#9c4936';c.fillRect(px-8,py-7,16,3);
+  }
+ }
+ // Player marker
+ c.save();c.translate(w/2,h/2);c.rotate(-(drivingCar?drivingCar.rotation.y:player.rotation.y));
+ c.fillStyle='#ffe34d';c.beginPath();c.moveTo(0,-13);c.lineTo(9,10);c.lineTo(0,6);c.lineTo(-9,10);c.closePath();c.fill();
+ c.strokeStyle='#17251f';c.lineWidth=3;c.stroke();c.restore();
+ // North marker
+ c.fillStyle='white';c.font='bold 14px Arial';c.textAlign='right';c.fillText('N',w-10,20);
+}
+// In-game phone: local demo interactions. Online calling/chat will need a multiplayer server.
+const phonePanel=document.getElementById('phonePanel');
+const phoneScreen=document.getElementById('phoneScreen');
+document.getElementById('phoneBtn').addEventListener('click',()=>{
+ phonePanel.style.display=phonePanel.style.display==='block'?'none':'block';
+});
+document.getElementById('closePhone').addEventListener('click',()=>phonePanel.style.display='none');
+phonePanel.querySelectorAll('[data-screen]').forEach(btn=>{
+ btn.addEventListener('click',()=>{
+  const screen=btn.dataset.screen;
+  if(screen==='business'){
+   phoneScreen.innerHTML='<b>MY BUSINESS</b><br>Corner Shop — Opening soon<br>Daily revenue: GH₵0<br>Status: Not purchased<br><button class="action" id="businessRefresh" type="button">Check business status</button>';
+   document.getElementById('businessRefresh').addEventListener('click',()=>{phoneScreen.innerHTML='<b>BUSINESS UPDATE</b><br>No businesses owned yet. Visit a shop or property office in the city to start your first business.'});
+  }else if(screen==='bank'){
+   phoneScreen.innerHTML='<b>GHANA DREAM BANK</b><br>Available balance: GH₵10,000<br>Transactions: No transactions yet.';
+  }else if(screen==='contacts'){
+   phoneScreen.innerHTML='<b>PLAYER CONTACTS</b><br>No players nearby yet.<br>When multiplayer is connected, players you meet can be added here.';
+  }else{
+   phoneScreen.innerHTML='<b>PLAYER CHAT</b><br><span style="color:#d5e4dc">Chat is currently a local preview. Live messages between players will be added with the online multiplayer system.</span><input id="chatInput" placeholder="Write a demo message…" maxlength="120"><button class="action" id="sendDemo" type="button" style="margin-top:8px">Send demo</button><div id="chatReply" style="margin-top:8px"></div>';
+   document.getElementById('sendDemo').addEventListener('click',()=>{
+    const input=document.getElementById('chatInput');
+    const reply=document.getElementById('chatReply');
+    reply.textContent=input.value.trim()?`You: ${input.value.trim()} (saved in this demo only)`:'Type a message first.';
+    input.value='';
+   });
+  }
+ });
+});
+const clock=new THREE.Clock();
+function animate(){
+ requestAnimationFrame(animate);
+ const dt=Math.min(clock.getDelta(),.04);
+ let forward=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0)-joy.y;
+ let side=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0)+joy.x;
+ const mag=Math.hypot(forward,side);
+ if(drivingCar){
+  if(Math.abs(forward)+Math.abs(side)>.05){
+   const steer=side*1.35*dt;drivingCar.rotation.y-=steer;
+   const speed=forward*15*dt;drivingCar.position.x+=Math.sin(drivingCar.rotation.y)*speed;drivingCar.position.z+=Math.cos(drivingCar.rotation.y)*speed;
+  }
+  drivingCar.position.x=THREE.MathUtils.clamp(drivingCar.position.x,-108,108);drivingCar.position.z=THREE.MathUtils.clamp(drivingCar.position.z,-108,108);
+  player.position.copy(drivingCar.position);
+ }else if(mag>.08){
+  forward/=Math.max(1,mag);side/=Math.max(1,mag);
+  const stride=Math.sin(clock.elapsedTime*10)*.48;
+  leg1.rotation.x=stride;leg2.rotation.x=-stride;
+  arm1.rotation.x=-stride*.72;arm2.rotation.x=stride*.72;
+  const fx=-Math.sin(yaw),fz=-Math.cos(yaw),rx=Math.cos(yaw),rz=-Math.sin(yaw);
+  player.position.x+=(fx*forward+rx*side)*6.2*dt;
+  player.position.z+=(fz*forward+rz*side)*6.2*dt;
+  player.rotation.y=Math.atan2(fx*forward+rx*side,fz*forward+rz*side);
+  document.getElementById('status').textContent='Exploring Accra';
+ }else if(!drivingCar){document.getElementById('status').textContent='Free roam';leg1.rotation.x*=.82;leg2.rotation.x*=.82;arm1.rotation.x*=.82;arm2.rotation.x*=.82;}
+ player.position.x=THREE.MathUtils.clamp(player.position.x,-108,108);
+ player.position.z=THREE.MathUtils.clamp(player.position.z,-108,108);
+ const focus=drivingCar?drivingCar.position:player.position;
+ const distance=drivingCar?13:10;
+ const target=new THREE.Vector3(focus.x+Math.sin(yaw)*distance*Math.cos(pitch),focus.y+4+distance*Math.sin(pitch),focus.z+Math.cos(yaw)*distance*Math.cos(pitch));
+ camera.position.lerp(target,.14);camera.lookAt(focus.x,drivingCar?1.1:1.3,focus.z);
+ for(const p of pedestrians){p.phase+=dt*.7;p.g.position.x=p.origin.x+Math.sin(p.phase)*1.7;p.g.position.z=p.origin.z+Math.cos(p.phase*.7)*1.2;}
+ drawMap();
+ renderer.render(scene,camera);
+}
+animate();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>
